@@ -2,7 +2,7 @@ import time
 import traceback
 from typing import Any
 
-from goal import Action
+from actions import Action
 
 
 class Environment:

@@ -8,7 +8,7 @@ from agent import Agent
 from completions import generate_response
 from environment import Environment
 from goal import Goal, AgentFunctionCallingActionLanguage
-from tool import register_tool
+from tool_data import register_tool
 
 load_dotenv()
 print(os.getenv('OPEN_IA_KEY'))
