@@ -3,9 +3,11 @@ from typing import List
 
 from dotenv import load_dotenv
 
+from actions import PythonActionRegistry
 from agent import Agent
 from completions import generate_response
-from goal import Goal, AgentFunctionCallingActionLanguage, PythonActionRegistry, Environment
+from environment import Environment
+from goal import Goal, AgentFunctionCallingActionLanguage
 from tool import register_tool
 
 load_dotenv()
@@ -109,8 +111,8 @@ if __name__ == '__main__':
             description=(
                 "Draft a complete README for the project. "
                 "When ready, persist it to disk by calling write with "
-                "name='README.md' and the README content. "
-                "After successfully writing, verify by calling read_project_file('README.md'). "
+                "name='README2.md' and the README content. "
+                "After successfully writing, verify by calling read_project_file('README2.md'). "
                 "Only then call terminate and include a short success note."
             ),
         ),
