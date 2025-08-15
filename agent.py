@@ -1,8 +1,9 @@
 import json
 from typing import Callable, List
 
-from goal import Goal, AgentLanguage, Environment, ActionRegistry, Memory
-from tool import Prompt
+from actions import ActionRegistry
+from goal import Goal, AgentLanguage, Environment, Memory
+from tool_data import Prompt
 
 
 class Agent:

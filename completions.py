@@ -3,7 +3,7 @@ import os
 
 from litellm import completion
 
-from tool import Prompt
+from tool_data import Prompt
 
 
 def generate_response(prompt: Prompt) -> str:
