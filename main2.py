@@ -1,5 +1,5 @@
 import os
-from typing import List, Optional
+from typing import List
 
 from dotenv import load_dotenv
 
@@ -8,15 +8,92 @@ from agent import Agent
 from completions import generate_response
 from environment import Environment
 from goal import Goal, AgentFunctionCallingActionLanguage
-from qa import agent_qa_function
-from tool_data import register_tool
+from tool_data import register_tool, Prompt
 
 load_dotenv()
 print(os.getenv('OPEN_IA_KEY'))
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
+    @register_tool()
+    def create_and_consult_expert(action_context: ActionContext,
+                                  expertise_domain: str,
+                                  problem_description: str) -> str:
+        """
+        Dynamically create and consult an expert persona based on the specific domain and problem.
+
+        Args:
+            expertise_domain: The specific domain of expertise needed
+            problem_description: Detailed description of the problem to be solved
+
+        Returns:
+            The expert's insights and recommendations
+        """
+        # Step 1: Dynamically generate a persona description
+        persona_description_prompt = f"""
+        Create a detailed description of an expert in {expertise_domain} who would be 
+        ideally suited to address the following problem:
+
+        {problem_description}
+
+        Your description should include:
+        - The expert's background and experience
+        - Their specific areas of specialization within {expertise_domain}
+        - Their approach to problem-solving
+        - The unique perspective they bring to this type of challenge
+        """
+
+        generate_response = action_context.get("llm")
+        persona_description = generate_response(Prompt(messages=[
+            {"role": "user", "content": persona_description_prompt}
+        ]))
+
+        # Step 2: Generate a specialized consultation prompt
+        consultation_prompt_generator = f"""
+        Create a detailed consultation prompt for an expert in {expertise_domain} 
+        addressing the following problem:
+
+        {problem_description}
+
+        The prompt should guide the expert to provide comprehensive insights and
+        actionable recommendations specific to this problem.
+        """
+
+        consultation_prompt = generate_response(Prompt(messages=[
+            {"role": "user", "content": consultation_prompt_generator}
+        ]))
+
+        # Step 3: Consult the dynamically created persona
+        return prompt_expert(
+            action_context=action_context,
+            description_of_expert=persona_description,
+            prompt=consultation_prompt
+        )
     # First, we'll define our tools using decorators
+    @register_tool()
+    def prompt_expert(action_context: ActionContext, description_of_expert: str, prompt: str) -> str:
+        """
+        Generate a response from an expert persona.
+
+        The expert's background and specialization should be thoroughly described to ensure
+        responses align with their expertise. The prompt should be focused on topics within
+        their domain of knowledge.
+
+        Args:
+            description_of_expert: Detailed description of the expert's background and expertise
+            prompt: The specific question or task for the expert
+
+        Returns:
+            The expert's response
+        """
+        generate_response = action_context.get("llm")
+        response = generate_response(Prompt(messages=[
+            {"role": "system",
+             "content": f"Act as the following expert and respond accordingly: {description_of_expert}"},
+            {"role": "user", "content": prompt}
+        ]))
+        return response
+
     @register_tool(tags=["file_operations", "write"])
     def write_file(
             name: str,
@@ -77,12 +154,6 @@ if __name__ == '__main__':
             return f.read()
 
 
-    @register_tool(tags=["qa-agent", "validation"])
-    def qa_agent(readme_content: Optional[str] = None,
-         readme_path: Optional[str] = None,) -> str:
-        return agent_qa_function(readme_content,readme_path)
-
-
     @register_tool(tags=["file_operations", "list"])
     def list_project_files() -> List[str]:
         """Lists all Python files in the current project directory.
@@ -120,9 +191,7 @@ if __name__ == '__main__':
                 "When ready, persist it to disk by calling write with "
                 "name='README2.md' and the README content. "
                 "After successfully writing, verify by calling read_project_file('README2.md'). "
-               " Then call agent_qa(readme_content=<loaded content>)."
-                " If QA passes (payload.passes == true), call terminate with a short success note."
-                " If QA fails, apply suggested_changes to improve the README and repeat once."
+                "Only then call terminate and include a short success note."
             ),
         ),
         Goal(priority=1,
@@ -135,7 +204,7 @@ if __name__ == '__main__':
         goals=goals,
         agent_language=AgentFunctionCallingActionLanguage(),
         # The ActionRegistry now automatically loads tools with these tags
-        action_registry=PythonActionRegistry(tags=["file_operations","list","read","write","system","qa-agent","validation"]),
+        action_registry=PythonActionRegistry(tags=["file_operations","list","read","write", "system"]),
         generate_response=generate_response,
         environment=Environment()
     )
